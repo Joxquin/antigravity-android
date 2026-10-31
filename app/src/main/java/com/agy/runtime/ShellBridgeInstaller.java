@@ -139,7 +139,7 @@ public final class ShellBridgeInstaller {
             for (File toolFile : prefixTools) {
                 if (toolFile.isFile()) {
                     String name = toolFile.getName();
-                    if ("rish".equals(name) || isOpenUrlShim(name)) {
+                    if ("rish".equals(name) || "su".equals(name) || "as-root".equals(name) || isOpenUrlShim(name)) {
                         continue;
                     }
                     writeBridge(new File(bin, name), prefix, name, appId);

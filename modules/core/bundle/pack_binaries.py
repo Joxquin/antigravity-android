@@ -99,6 +99,13 @@ def pack_binaries(core_bin_path: str, loader_path: str, shims_dir: str, dest_bin
             shutil.copyfile(src_rish, dst_f)
             make_exec(dst_f)
             installed.append("rish")
+
+        src_su = os.path.join(priv_dir, "su.sh")
+        if os.path.isfile(src_su):
+            dst_su = os.path.join(dest_bin_dir, "su")
+            shutil.copyfile(src_su, dst_su)
+            make_exec(dst_su)
+            installed.append("su")
         
         src_dex = os.path.join(priv_dir, "rish_shizuku.dex")
         if os.path.isfile(src_dex):

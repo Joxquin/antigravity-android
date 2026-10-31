@@ -27,6 +27,7 @@ def application_id_from_prefix():
 AGY_APPLICATION_ID = (os.environ.get("AGY_APPLICATION_ID")
                       or os.environ.get("RISH_APPLICATION_ID")
                       or application_id_from_prefix())
+SU_BIN = os.path.join(PREFIX, "bin", "su")
 RISH_BIN = os.path.join(PREFIX, "bin", "rish")
 BASH_BIN = os.path.join(PREFIX, "bin", "bash")
 CONFIG_DIR = os.path.join(HOME, ".gemini", "antigravity-app", "daemon")
@@ -93,7 +94,12 @@ def wake_antigravity_app():
         "-c", "android.intent.category.LAUNCHER", "-p", AGY_APPLICATION_ID
     ]
     try:
-        if os.path.isfile(RISH_BIN):
+        if os.path.isfile(SU_BIN):
+            subprocess.run(
+                [SU_BIN, "-c", " ".join(shlex.quote(part) for part in command)],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=15
+            )
+        elif os.path.isfile(RISH_BIN):
             subprocess.run(
                 [RISH_BIN, "-c", " ".join(shlex.quote(part) for part in command)],
                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=15

@@ -6,5 +6,6 @@ open
 open_helper
 rish
 sensible-browser
+su
 x-www-browser
 xdg-open

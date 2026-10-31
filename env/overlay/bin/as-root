@@ -1,0 +1,10 @@
+#!/system/bin/sh
+# AGY as-root helper: ergonomic wrapper to run commands via su.
+# Runs command within global mount namespace when supported.
+
+if [ $# -eq 0 ]; then
+  exec su
+fi
+
+# Try running with --mount-master first for full namespace visibility (KernelSU/Magisk)
+exec su --mount-master -c "$*" 2>/dev/null || exec su -c "$*"

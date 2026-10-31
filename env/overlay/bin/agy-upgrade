@@ -222,10 +222,19 @@ cmd_apply() {
     echo ">>> Step 1/3: Creating pre-update safeguard backup..."
     cmd_backup "$BACKUP_ROOT/pre_update_$(date +%Y%m%d_%H%M%S).tar.gz"
     
-    # 2. Check if Shizuku (rish) is available and functional for automated install
+    # 2. Check if Root (su) or Shizuku (rish) is available and functional for automated install
     echo -e "\n>>> Step 2/3: Installing updated APK: $apk"
+    local su_ok=0
+    if command -v su >/dev/null 2>&1; then
+        local su_test
+        su_test=$(su -c "id -u" 2>&1 || true)
+        if [ "$su_test" = "0" ]; then
+            su_ok=1
+        fi
+    fi
+
     local rish_ok=0
-    if command -v rish >/dev/null 2>&1; then
+    if [ "$su_ok" -eq 0 ] && command -v rish >/dev/null 2>&1; then
         local rish_test
         rish_test=$(rish -c "id" 2>&1 || true)
         if echo "$rish_test" | grep -q "uid="; then
@@ -233,7 +242,14 @@ cmd_apply() {
         fi
     fi
 
-    if [ "$rish_ok" -eq 1 ]; then
+    if [ "$su_ok" -eq 1 ]; then
+        echo "[*] Superuser (root) is active! Performing silent in-place upgrade via pm install -r..."
+        if su -c "pm install -r \"$apk\""; then
+            echo "[OK] APK installed successfully via Root!"
+        else
+            echo "[WARN] Root pm install returned non-zero code."
+        fi
+    elif [ "$rish_ok" -eq 1 ]; then
         echo "[*] Shizuku is active! Performing silent in-place upgrade via pm install -r..."
         if rish -c "pm install -r \"$apk\""; then
             echo "[OK] APK installed successfully via Shizuku!"
