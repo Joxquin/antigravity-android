@@ -30,6 +30,7 @@ import com.agy.oauth.OAuthManager;
 import com.agy.oauth.OAuthTokenStore;
 import com.agy.runtime.RuntimeManager;
 import com.agy.shell.ShizukuBridge;
+import com.agy.shell.SuBridge;
 import com.agy.theme.ThemeManager;
 import com.agy.ui.lifecycle.AppLifecycle;
 import com.agy.ui.lifecycle.BackNavigator;
@@ -64,6 +65,7 @@ public class MainActivity extends Activity
     private OAuthManager oauthManager;
     private RuntimeManager runtimeManager;
     private ShizukuBridge shizukuBridge;
+    private SuBridge suBridge;
     private AndroidBridge androidBridge;
     private WebViewHost webViewHost;
     private SplashController splash;
@@ -143,7 +145,8 @@ public class MainActivity extends Activity
         oauthManager = new OAuthManager();
         runtimeManager = new RuntimeManager(this);
         shizukuBridge = new ShizukuBridge(this);
-        androidBridge = new AndroidBridge(this, runtimeManager, shizukuBridge, themeManager);
+        suBridge = new SuBridge(this);
+        androidBridge = new AndroidBridge(this, runtimeManager, shizukuBridge, suBridge, themeManager);
         androidBridge.setActivity(this);
         webViewHost = new WebViewHost(this, themeManager, oauthManager, androidBridge, this);
         webViewHost.setListener(this);
@@ -426,6 +429,19 @@ public class MainActivity extends Activity
         }
     }
 
+    public void onDirectorySelected(final String realPath) {
+        if (webViewHost != null && webViewHost.getWebView() != null) {
+            webViewHost.getWebView().post(new Runnable() {
+                @Override
+                public void run() {
+                    String jsArg = realPath != null ? org.json.JSONObject.quote(realPath) : "null";
+                    webViewHost.getWebView().evaluateJavascript(
+                            "window.__onDirectoryPicked && window.__onDirectoryPicked(" + jsArg + ");", null);
+                }
+            });
+        }
+    }
+
     public static final int REQUEST_DIR_CHOOSER = 2002;
 
     public void launchDirectoryPicker() {
@@ -458,15 +474,7 @@ public class MainActivity extends Activity
                 realPath = com.agy.util.DocumentsContractHelper.resolveTreeUriToPath(this, treeUri);
             }
             if (webViewHost != null && webViewHost.getWebView() != null) {
-                final String path = realPath;
-                webViewHost.getWebView().post(new Runnable() {
-                    @Override
-                    public void run() {
-                        String jsArg = path != null ? org.json.JSONObject.quote(path) : "null";
-                        webViewHost.getWebView().evaluateJavascript(
-                                "window.__onDirectoryPicked && window.__onDirectoryPicked(" + jsArg + ");", null);
-                    }
-                });
+                onDirectorySelected(realPath);
             }
             return;
         }

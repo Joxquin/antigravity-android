@@ -39,6 +39,7 @@ public final class ExecHandler {
         String source = payload.optString("source", "agent");
         long timeoutMs = payload.optLong("timeout_ms", 30000);
         boolean useRish = payload.optBoolean("rish", false);
+        boolean useRoot = payload.optBoolean("root", false) || payload.optBoolean("su", false);
         String cwdPath = payload.optString("cwd", context.getFilesDir().getAbsolutePath());
 
         String cmdId = "cmd_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 4);
@@ -68,7 +69,10 @@ public final class ExecHandler {
 
         try {
             ProcessBuilder pb;
-            if (useRish) {
+            if (useRoot) {
+                String suPath = resolveSuPath();
+                pb = new ProcessBuilder(suPath, "--mount-master", "-c", cmd);
+            } else if (useRish) {
                 pb = new ProcessBuilder(resolveRishPath(), "-c", cmd);
             } else {
                 pb = new ProcessBuilder("/system/bin/sh", "-c", cmd);
@@ -84,6 +88,7 @@ public final class ExecHandler {
             pb.environment().put("PATH", home + "/usr/bin:" + home + "/runtime/bin:/system/bin:" + System.getenv("PATH"));
             pb.environment().put("RISH_APPLICATION_ID", context.getPackageName());
             pb.environment().remove("LD_LIBRARY_PATH");
+            pb.environment().remove("LD_PRELOAD");
 
             Process proc = pb.start();
 
@@ -147,6 +152,23 @@ public final class ExecHandler {
                 out.append(line);
             }
         } catch (Exception ignored) {}
+    }
+
+    private String resolveSuPath() {
+        File[] candidates = new File[]{
+                new File("/system/bin/su"),
+                new File("/system/xbin/su"),
+                new File("/sbin/su"),
+                new File("/data/adb/ksu/bin/su"),
+                new File("/data/adb/ap/bin/su"),
+                new File("/data/adb/magisk/su")
+        };
+        for (File candidate : candidates) {
+            if (candidate.exists()) {
+                return candidate.getAbsolutePath();
+            }
+        }
+        return "su";
     }
 
     private String resolveRishPath() {

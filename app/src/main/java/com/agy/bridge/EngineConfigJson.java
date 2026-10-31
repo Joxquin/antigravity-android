@@ -5,6 +5,7 @@ import android.content.Context;
 import com.agy.runtime.RuntimeConfig;
 import com.agy.runtime.RuntimeManager;
 import com.agy.shell.ShizukuBridge;
+import com.agy.shell.SuBridge;
 
 import org.json.JSONObject;
 
@@ -15,14 +16,16 @@ public final class EngineConfigJson {
     private final RuntimeManager runtime;
     private final EngineBridge engine;
     private final ShizukuBridge shizuku;
+    private final SuBridge su;
     private final ThemeBridge theme;
 
     public EngineConfigJson(Context appContext, RuntimeManager runtime, EngineBridge engine,
-                            ShizukuBridge shizuku, ThemeBridge theme) {
+                            ShizukuBridge shizuku, SuBridge su, ThemeBridge theme) {
         this.appContext = appContext;
         this.runtime = runtime;
         this.engine = engine;
         this.shizuku = shizuku;
+        this.su = su;
         this.theme = theme;
     }
 
@@ -44,6 +47,7 @@ public final class EngineConfigJson {
             o.put("tmpDir", appContext.getCacheDir().getAbsolutePath());
             o.put("appDataDir", runtime.getAppDataDir().getAbsolutePath());
             o.put("shizukuAvailable", shizuku.isAvailable());
+            o.put("rootAvailable", su != null && su.isAvailable());
             o.put("theme", theme.getTheme());
             return o.toString();
         } catch (Exception e) {

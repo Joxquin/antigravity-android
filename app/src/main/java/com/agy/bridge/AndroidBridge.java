@@ -5,6 +5,7 @@ import android.webkit.JavascriptInterface;
 
 import com.agy.runtime.RuntimeManager;
 import com.agy.shell.ShizukuBridge;
+import com.agy.shell.SuBridge;
 import com.agy.theme.ThemeManager;
 import com.agy.ui.MainActivity;
 
@@ -28,11 +29,11 @@ public final class AndroidBridge {
     private volatile WeakReference<MainActivity> activityRef;
 
     public AndroidBridge(Context context, RuntimeManager runtime,
-                         ShizukuBridge shizuku, ThemeManager theme) {
+                         ShizukuBridge shizuku, SuBridge su, ThemeManager theme) {
         Context appContext = context.getApplicationContext();
         this.themeBridge = new ThemeBridge(theme);
         this.engine = new EngineBridge(runtime);
-        this.config = new EngineConfigJson(appContext, runtime, engine, shizuku, themeBridge);
+        this.config = new EngineConfigJson(appContext, runtime, engine, shizuku, su, themeBridge);
     }
 
     /** Host activity, used to dismiss the native splash once the UI has painted. */
@@ -56,6 +57,23 @@ public final class AndroidBridge {
                 @Override
                 public void run() {
                     act.launchDirectoryPicker();
+                }
+            });
+        }
+    }
+
+    /**
+     * Resolves and opens a path directly without invoking SAF directory chooser.
+     * Useful for opening root filesystem paths (/), termux/pkg prefix paths, or internal storage.
+     */
+    @JavascriptInterface
+    public void openPath(final String path) {
+        final MainActivity act = activityRef != null ? activityRef.get() : MainActivity.activeActivity;
+        if (act != null && path != null && !path.trim().isEmpty()) {
+            act.runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    act.onDirectorySelected(path.trim());
                 }
             });
         }
