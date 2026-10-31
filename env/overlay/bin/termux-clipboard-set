@@ -57,7 +57,7 @@ case "$CLEAN" in
       XDG_BIN="/data/user/0/com.agy/files/usr/bin/xdg-open"
     fi
     if [ -n "$XDG_BIN" ]; then
-      "$XDG_BIN" "https://github.com/login/device" >/dev/null 2>&1 &
+      "$XDG_BIN" "https://github.com/login/device" >/dev/null 2>&1
     fi
     ;;
 esac

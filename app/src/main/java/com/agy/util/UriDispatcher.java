@@ -35,7 +35,10 @@ public final class UriDispatcher {
                 Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(uriOrPath));
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 intent.putExtra("android.support.customtabs.extra.TITLE_VISIBILITY", 1);
-                context.startActivity(intent);
+                Context target = (com.agy.ui.MainActivity.activeActivity != null)
+                        ? com.agy.ui.MainActivity.activeActivity
+                        : context;
+                target.startActivity(intent);
                 return true;
             } catch (Exception e) {
                 Log.w(TAG, "Cannot open web uri: " + uriOrPath, e);
