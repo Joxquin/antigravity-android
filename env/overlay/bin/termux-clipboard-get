@@ -1,5 +1,5 @@
 #!/system/bin/sh
-# AGY clipboard getter shim (termux-clipboard-get / wl-paste / xclip).
+# AGY clipboard getter shim (termux-clipboard-get).
 # Queries clipboard text via Antigravity System Gateway.
 
 PORT=""
@@ -36,7 +36,6 @@ if [ -n "$CURL_BIN" ]; then
   RESP=$(LD_LIBRARY_PATH="$LIB_DIR" "$CURL_BIN" -s --connect-timeout 1 -m 2 -X POST "http://127.0.0.1:$PORT/gateway" \
     -H "Content-Type: application/json" \
     -d "$PAYLOAD" 2>/dev/null || true)
-  # Extract text from JSON {"ok":true,"text":"..."}
   echo "$RESP" | sed -n 's/.*"text":"\([^"]*\)".*/\1/p'
 fi
 

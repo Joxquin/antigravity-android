@@ -1,5 +1,5 @@
 #!/system/bin/sh
-# AGY clipboard setter shim (termux-clipboard-set / wl-copy / xclip).
+# AGY clipboard setter shim (termux-clipboard-set).
 # Dispatches clipboard text via Antigravity System Gateway.
 
 TEXT=""

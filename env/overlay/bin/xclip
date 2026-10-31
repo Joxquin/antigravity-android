@@ -1,1 +1,9 @@
-termux-clipboard-set
+#!/system/bin/sh
+for arg in "$@"; do
+  case "$arg" in
+    -o|--out)
+      exec "$(dirname "$0")/termux-clipboard-get"
+      ;;
+  esac
+done
+exec "$(dirname "$0")/termux-clipboard-set" "$@"

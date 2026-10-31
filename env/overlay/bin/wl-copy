@@ -1,1 +1,2 @@
-termux-clipboard-set
+#!/system/bin/sh
+exec "$(dirname "$0")/termux-clipboard-set" "$@"

@@ -62,5 +62,12 @@ public final class AssetUnpacker {
              OutputStream out = new FileOutputStream(dest)) {
             IoUtil.pipe(in, out);
         }
+        if (dest.getPath().contains("/bin/") || (parent != null && "bin".equals(parent.getName()))) {
+            dest.setReadable(true, false);
+            dest.setExecutable(true, false);
+            try {
+                android.system.Os.chmod(dest.getAbsolutePath(), 0755);
+            } catch (Throwable ignored) {}
+        }
     }
 }

@@ -170,9 +170,7 @@ public final class EnvInstaller {
             TermuxShebangRewriter.rewrite(prefix, targetPrefix);
             TermuxPrefixRewriter.rewrite(prefix, targetPrefix);
         }
-        if (overlayChanged || pkgChanged) {
-            FileModeUtil.recursiveSetExec(new File(prefix, "bin"));
-        }
+        FileModeUtil.recursiveSetExec(new File(prefix, "bin"));
         FileModeUtil.setExec(new File(prefix, "libexec/pkg/pkg"));
         File fixPaths = new File(prefix, EnvPaths.FIX_PATHS_REL);
         if (fixPaths.isFile()) {
