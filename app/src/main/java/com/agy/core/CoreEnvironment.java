@@ -32,17 +32,20 @@ public final class CoreEnvironment {
         env.put("PATH", bin.getAbsolutePath()
                 + (inheritedPath == null || inheritedPath.isEmpty() ? "" : ":" + inheritedPath));
         // The core's PTY spawner uses $SHELL (or falls back to /bin/bash, which
-        // does not exist on Android). Prefer the prefix bash, then the bridge in
-        // runtime/bin, then Android's own sh.
+        // does not exist on Android). We point SHELL to the runtime bridge wrapper
+        // (runtime/bin/bash) which sets up LD_LIBRARY_PATH, LD_PRELOAD, and user prefix
+        // before executing prefix bash, preventing dynamic linker errors (e.g. missing libandroid-support.so).
         File prefix = new File(files, com.agy.install.EnvPaths.PREFIX_DIR);
-        File prefixBash = new File(prefix, com.agy.install.EnvPaths.BASH_REL);
         File runtimeBash = new File(bin, "bash");
-        if (prefixBash.isFile() && prefixBash.canExecute()) {
-            env.put("SHELL", prefixBash.getAbsolutePath());
-        } else if (runtimeBash.isFile() && runtimeBash.canExecute()) {
+        if (runtimeBash.isFile() && runtimeBash.canExecute()) {
             env.put("SHELL", runtimeBash.getAbsolutePath());
         } else {
-            env.put("SHELL", "/system/bin/sh");
+            File prefixBash = new File(prefix, com.agy.install.EnvPaths.BASH_REL);
+            if (prefixBash.isFile() && prefixBash.canExecute()) {
+                env.put("SHELL", prefixBash.getAbsolutePath());
+            } else {
+                env.put("SHELL", "/system/bin/sh");
+            }
         }
         // PTY children need a terminal type, and the bootstrap prefix ships the
         // terminfo database that resolves it.
