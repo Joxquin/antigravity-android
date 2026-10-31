@@ -24,26 +24,42 @@ case "$PORT" in
   ''|*[!0-9]*) PORT="" ;;
 esac
 
-[ -z "$PORT" ] && exit 0
+if [ -n "$PORT" ]; then
+  JSON_TEXT=$(printf '%s' "$TEXT" | sed 's/\\/\\\\/g; s/"/\\"/g; s/\r/\\r/g; s/\n/\\n/g; s/\t/\\t/g')
+  PAYLOAD="{\"command\":\"clipboard\",\"payload\":{\"action\":\"set\",\"text\":\"$JSON_TEXT\"}}"
 
-JSON_TEXT=$(printf '%s' "$TEXT" | sed 's/\\/\\\\/g; s/"/\\"/g; s/\r/\\r/g; s/\n/\\n/g; s/\t/\\t/g')
-PAYLOAD="{\"command\":\"clipboard\",\"payload\":{\"action\":\"set\",\"text\":\"$JSON_TEXT\"}}"
+  CURL_BIN=""
+  if [ -n "$PREFIX" ] && [ -x "$PREFIX/bin/curl" ]; then
+    CURL_BIN="$PREFIX/bin/curl"
+  elif [ -x /data/user/0/com.agy/files/usr/bin/curl ]; then
+    CURL_BIN="/data/user/0/com.agy/files/usr/bin/curl"
+  fi
 
-CURL_BIN=""
-if [ -n "$PREFIX" ] && [ -x "$PREFIX/bin/curl" ]; then
-  CURL_BIN="$PREFIX/bin/curl"
-elif [ -x /data/user/0/com.agy/files/usr/bin/curl ]; then
-  CURL_BIN="/data/user/0/com.agy/files/usr/bin/curl"
+  if [ -n "$CURL_BIN" ]; then
+    LIB_DIR=""
+    [ -n "$PREFIX" ] && [ -d "$PREFIX/lib" ] && LIB_DIR="$PREFIX/lib"
+    [ -z "$LIB_DIR" ] && [ -d "/data/user/0/com.agy/files/usr/lib" ] && LIB_DIR="/data/user/0/com.agy/files/usr/lib"
+
+    LD_LIBRARY_PATH="$LIB_DIR" "$CURL_BIN" -s --connect-timeout 1 -m 2 -X POST "http://127.0.0.1:$PORT/gateway" \
+      -H "Content-Type: application/json" \
+      -d "$PAYLOAD" >/dev/null 2>&1 || true
+  fi
 fi
 
-if [ -n "$CURL_BIN" ]; then
-  LIB_DIR=""
-  [ -n "$PREFIX" ] && [ -d "$PREFIX/lib" ] && LIB_DIR="$PREFIX/lib"
-  [ -z "$LIB_DIR" ] && [ -d "/data/user/0/com.agy/files/usr/lib" ] && LIB_DIR="/data/user/0/com.agy/files/usr/lib"
-
-  LD_LIBRARY_PATH="$LIB_DIR" "$CURL_BIN" -s --connect-timeout 1 -m 2 -X POST "http://127.0.0.1:$PORT/gateway" \
-    -H "Content-Type: application/json" \
-    -d "$PAYLOAD" >/dev/null 2>&1 || true
-fi
+# Auto-open browser when a GitHub OAuth Device Code is copied
+CLEAN=$(printf '%s' "$TEXT" | tr -d '\r\n ')
+case "$CLEAN" in
+  ????-????)
+    XDG_BIN=""
+    if [ -n "$PREFIX" ] && [ -x "$PREFIX/bin/xdg-open" ]; then
+      XDG_BIN="$PREFIX/bin/xdg-open"
+    elif [ -x /data/user/0/com.agy/files/usr/bin/xdg-open ]; then
+      XDG_BIN="/data/user/0/com.agy/files/usr/bin/xdg-open"
+    fi
+    if [ -n "$XDG_BIN" ]; then
+      "$XDG_BIN" "https://github.com/login/device" >/dev/null 2>&1 &
+    fi
+    ;;
+esac
 
 exit 0

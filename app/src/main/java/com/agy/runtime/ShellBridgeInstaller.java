@@ -303,6 +303,7 @@ public final class ShellBridgeInstaller {
         sb.append("export GIT_ATTR_NOSYSTEM=1\n");
         sb.append("export GIT_TEMPLATE_DIR=\"$PREFIX/share/git-core/templates\"\n");
         sb.append("export GIT_EXEC_PATH=\"$PREFIX/libexec/git-core\"\n");
+        sb.append("export BROWSER=\"$PREFIX/bin/xdg-open\"\n");
         sb.append("export PAGER=\"cat\"\n");
         sb.append("unset GODEBUG\n");
         sb.append("if [ -x \"$PREFIX/bin/").append(target).append("\" ]; then\n");
