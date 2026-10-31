@@ -80,11 +80,30 @@ AGY includes an ultra-fast, native package manager (`pkg`) written in Bash & AWK
 
 ---
 
-## 4. Elevated Operations via Shizuku (`rish`)
+## 4. Superuser (Root / `su`) and Elevated Shizuku Operations
 
-The agent has native access to Shizuku's elevated ADB shell (`uid=2000(shell)`):
+The agent has native access to both **Superuser (Root `uid=0`)** and **Shizuku ADB shell (`uid=2000`)**:
+
+### A. Superuser / Root (`su` or `as-root`)
+- **Executable Location:** `$PREFIX/bin/su` and `$PREFIX/bin/as-root`.
+- **Managers Supported:** KernelSU, Magisk, APatch.
+- **KernelSU App Profile Recommended Configuration:**
+  - In KernelSU / Magisk manager, authorize `com.agy`.
+  - For **KernelSU**: In the App Profile, set **Mount Namespace: Global** (or use `su --mount-master`) to ensure full filesystem visibility and mounting capabilities.
+- **Usage:**
+  ```bash
+  # Check root privilege
+  su -c "id"
+  # Run commands directly with global namespace
+  as-root ls -la /data/data/com.agy
+  # Direct root filesystem inspect and project manipulation
+  su -c "ls -la /data/local/tmp"
+  ```
+
+### B. Elevated Operations via Shizuku (`rish`)
+The agent has fallback access to Shizuku's elevated ADB shell (`uid=2000(shell)`):
 - **Executable Location:** `$PREFIX/bin/rish` (invoked via `rish -c "<command>"`).
-- **Service Dependency:** Requires the Shizuku service to be running on the device. If `rish` reports `Server is not running`, ask the user to start Shizuku.
+- **Service Dependency:** Requires the Shizuku service to be running on the device. If `rish` reports `Server is not running`, ask the user to start Shizuku or use `su`.
 - **Common Elevated Operations:**
   1. **Restricted Filesystem Access:** Access files in protected directories (e.g. `/storage/emulated/0/Android/data`):
      ```bash
@@ -93,20 +112,19 @@ The agent has native access to Shizuku's elevated ADB shell (`uid=2000(shell)`):
      ```
   2. **APK & Package Management (`pm`):**
      ```bash
-     rish -c "pm install -r /storage/emulated/0/.../app.apk"
-     rish -c "pm list packages -3"
-     rish -c "pm uninstall com.example.app"
+     su -c "pm install -r /storage/emulated/0/.../app.apk" || rish -c "pm install -r /storage/emulated/0/.../app.apk"
+     pm list packages -3
      ```
   3. **Activity Management & Diagnostics (`am`, `logcat`, `dumpsys`):**
      ```bash
-     rish -c "am start -n com.example.app/.MainActivity"
-     rish -c "logcat -d -t 150"
-     rish -c "dumpsys package com.example.app"
+     am start -n com.example.app/.MainActivity
+     logcat -d -t 150
+     dumpsys package com.example.app
      ```
   4. **System Properties & Settings:**
      ```bash
-     rish -c "getprop ro.build.version.release"
-     rish -c "settings get global airplane_mode_on"
+     getprop ro.build.version.release
+     settings get global airplane_mode_on
      ```
 
 ---
