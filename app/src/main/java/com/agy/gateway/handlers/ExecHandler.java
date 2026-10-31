@@ -85,7 +85,11 @@ public final class ExecHandler {
 
             String home = context.getFilesDir().getAbsolutePath();
             pb.environment().put("HOME", home);
-            pb.environment().put("PATH", home + "/usr/bin:" + home + "/runtime/bin:/system/bin:" + System.getenv("PATH"));
+            if (useRoot) {
+                pb.environment().put("PATH", "/system/bin:/system/xbin:" + home + "/usr/bin:" + home + "/runtime/bin:" + System.getenv("PATH"));
+            } else {
+                pb.environment().put("PATH", home + "/usr/bin:" + home + "/runtime/bin:/system/bin:" + System.getenv("PATH"));
+            }
             pb.environment().put("RISH_APPLICATION_ID", context.getPackageName());
             pb.environment().remove("LD_LIBRARY_PATH");
             pb.environment().remove("LD_PRELOAD");

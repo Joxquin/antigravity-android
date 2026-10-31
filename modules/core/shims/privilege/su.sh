@@ -19,5 +19,14 @@ if [ -z "$SU_BIN" ] || [ ! -x "$SU_BIN" ]; then
   exit 127
 fi
 
-# Unset glibc and dynamic linker variables that conflict with Android bionic
-exec env -u LD_PRELOAD -u LD_LIBRARY_PATH "$SU_BIN" "$@"
+# Ensure bionic system binaries are first in PATH both for su and child commands
+SYS_PATH="/system/bin:/system/xbin"
+
+if [ "$1" = "-c" ] && [ -n "$2" ]; then
+  shift
+  cmd="$1"
+  shift
+  exec env -u LD_PRELOAD -u LD_LIBRARY_PATH PATH="$SYS_PATH:$PATH" "$SU_BIN" -c "export PATH=\"$SYS_PATH:\$PATH\"; unset LD_PRELOAD LD_LIBRARY_PATH; $cmd" "$@"
+fi
+
+exec env -u LD_PRELOAD -u LD_LIBRARY_PATH PATH="$SYS_PATH:$PATH" "$SU_BIN" "$@"
