@@ -35,7 +35,7 @@ public final class ShellBridgeInstaller {
     /** Records which prefix the bulk bridges were generated for. Bump when the
      *  bridge script format changes so a warm launch regenerates them once. */
     private static final String BRIDGE_MARKER = ".agy-bridges";
-    private static final int BRIDGE_FORMAT = 2;
+    private static final int BRIDGE_FORMAT = 3;
 
     private ShellBridgeInstaller() {
     }
@@ -199,21 +199,76 @@ public final class ShellBridgeInstaller {
 
     /**
      * Writes the AGY URL opener shim. It prints markers for the core stdout
-     * reader and sends one signature-protected internal broadcast as a shell-side fallback.
+     * reader and dispatches via System Gateway, Root Shell, or internal broadcast.
      */
     private static void writeOpenUrlShim(File bridge, android.content.Context context) {
         String pkg = (context != null) ? context.getPackageName() : "com.agy";
 
         StringBuilder sb = new StringBuilder();
         sb.append("#!/system/bin/sh\n");
-        sb.append("# AGY URL opener shim (xdg-open / open / sensible-browser).\n");
+        sb.append("# AGY URL & File Opener Shim (xdg-open / open / sensible-browser).\n");
         sb.append("unset LD_PRELOAD\n");
         sb.append("unset LD_LIBRARY_PATH\n");
-        sb.append("URL=\"$1\"\n");
-        sb.append("[ -z \"$URL\" ] && URL=\"$2\"\n");
+        sb.append("URL=\"\"\n");
+        sb.append("for arg in \"$@\"; do\n");
+        sb.append("  case \"$arg\" in\n");
+        sb.append("    http://*|https://*|file://*) URL=\"$arg\"; break ;;\n");
+        sb.append("  esac\n");
+        sb.append("done\n");
+        sb.append("if [ -z \"$URL\" ]; then\n");
+        sb.append("  for arg in \"$@\"; do\n");
+        sb.append("    case \"$arg\" in\n");
+        sb.append("      -*|\"\") ;;\n");
+        sb.append("      *) [ -f \"$arg\" -o -d \"$arg\" ] && URL=$(realpath \"$arg\" 2>/dev/null || echo \"$PWD/$arg\") || URL=\"$arg\"; break ;;\n");
+        sb.append("    esac\n");
+        sb.append("  done\n");
+        sb.append("fi\n");
         sb.append("[ -z \"$URL\" ] && exit 0\n");
         sb.append("echo \"AGY_OPEN_URL=$URL\"\n");
         sb.append("echo \"ANTIGRAVITY_OPEN_URL: $URL\"\n");
+        sb.append("PORT=\"\"\n");
+        sb.append("if [ -n \"$PREFIX\" ] && [ -f \"$PREFIX/../logs/gateway.port\" ]; then\n");
+        sb.append("  PORT=$(cat \"$PREFIX/../logs/gateway.port\" 2>/dev/null)\n");
+        sb.append("elif [ -f \"/data/user/0/").append(pkg).append("/files/logs/gateway.port\" ]; then\n");
+        sb.append("  PORT=$(cat \"/data/user/0/").append(pkg).append("/files/logs/gateway.port\" 2>/dev/null)\n");
+        sb.append("elif [ -f \"/data/data/").append(pkg).append("/files/logs/gateway.port\" ]; then\n");
+        sb.append("  PORT=$(cat \"/data/data/").append(pkg).append("/files/logs/gateway.port\" 2>/dev/null)\n");
+        sb.append("elif [ -d \"/data/user/0/").append(pkg).append("\" ] || [ -d \"/data/data/").append(pkg).append("\" ]; then\n");
+        sb.append("  PORT=45160\n");
+        sb.append("fi\n");
+        sb.append("case \"$PORT\" in ''|*[!0-9]*) PORT=\"\" ;; esac\n");
+        sb.append("if [ -n \"$PORT\" ]; then\n");
+        sb.append("  JSON_URL=$(printf '%s' \"$URL\" | sed 's/\\\\/\\\\\\\\/g; s/\"/\\\\\"/g')\n");
+        sb.append("  PAYLOAD=\"{\\\"command\\\":\\\"open_url\\\",\\\"payload\\\":{\\\"url\\\":\\\"$JSON_URL\\\"}}\"\n");
+        sb.append("  CURL_BIN=\"\"\n");
+        sb.append("  if [ -n \"$PREFIX\" ] && [ -x \"$PREFIX/bin/curl\" ]; then\n");
+        sb.append("    CURL_BIN=\"$PREFIX/bin/curl\"\n");
+        sb.append("  elif [ -x /data/user/0/").append(pkg).append("/files/usr/bin/curl ]; then\n");
+        sb.append("    CURL_BIN=\"/data/user/0/").append(pkg).append("/files/usr/bin/curl\"\n");
+        sb.append("  fi\n");
+        sb.append("  if [ -n \"$CURL_BIN\" ]; then\n");
+        sb.append("    LIB_DIR=\"\"\n");
+        sb.append("    [ -n \"$PREFIX\" ] && [ -d \"$PREFIX/lib\" ] && LIB_DIR=\"$PREFIX/lib\"\n");
+        sb.append("    [ -z \"$LIB_DIR\" ] && [ -d \"/data/user/0/").append(pkg).append("/files/usr/lib\" ] && LIB_DIR=\"/data/user/0/").append(pkg).append("/files/usr/lib\"\n");
+        sb.append("    RESP=$(LD_LIBRARY_PATH=\"$LIB_DIR\" \"$CURL_BIN\" -s --connect-timeout 1 -m 2 -X POST \"http://127.0.0.1:$PORT/gateway\" -H \"Content-Type: application/json\" -d \"$PAYLOAD\" 2>/dev/null || true)\n");
+        sb.append("    case \"$RESP\" in *'\"ok\":true'*|*'\"ok\": true'*) exit 0 ;; esac\n");
+        sb.append("  fi\n");
+        sb.append("fi\n");
+        sb.append("if [ -x /system/bin/sh ]; then\n");
+        sb.append("  SU_BIN=\"\"\n");
+        sb.append("  if [ -n \"$PREFIX\" ] && [ -x \"$PREFIX/bin/su\" ]; then\n");
+        sb.append("    SU_BIN=\"$PREFIX/bin/su\"\n");
+        sb.append("  elif [ -x /data/user/0/").append(pkg).append("/files/usr/bin/su ]; then\n");
+        sb.append("    SU_BIN=\"/data/user/0/").append(pkg).append("/files/usr/bin/su\"\n");
+        sb.append("  elif [ -x /system/bin/su ]; then\n");
+        sb.append("    SU_BIN=\"/system/bin/su\"\n");
+        sb.append("  elif [ -x /system/xbin/su ]; then\n");
+        sb.append("    SU_BIN=\"/system/xbin/su\"\n");
+        sb.append("  fi\n");
+        sb.append("  if [ -n \"$SU_BIN\" ]; then\n");
+        sb.append("    \"$SU_BIN\" -c \"/system/bin/am start -a android.intent.action.VIEW -d \\\"$URL\\\"\" >/dev/null 2>&1 && exit 0\n");
+        sb.append("  fi\n");
+        sb.append("fi\n");
         sb.append("if [ -x /system/bin/am ]; then\n");
         sb.append("  /system/bin/am broadcast -a com.agy.ACTION_OPEN_URL -p ").append(pkg).append(" --es url \"$URL\" >/dev/null 2>&1 || true\n");
         sb.append("fi\n");

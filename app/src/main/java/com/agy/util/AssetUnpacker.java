@@ -55,6 +55,9 @@ public final class AssetUnpacker {
         if (parent != null && !parent.exists() && !parent.mkdirs()) {
             throw new IOException("cannot create " + parent);
         }
+        if (dest.exists()) {
+            dest.delete();
+        }
         try (InputStream in = assets.open(assetPath);
              OutputStream out = new FileOutputStream(dest)) {
             IoUtil.pipe(in, out);
