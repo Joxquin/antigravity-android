@@ -29,6 +29,8 @@ export PAGER="less"
 export OPENSSL_CONF="$PREFIX/etc/tls/openssl.cnf"
 export LANG="${LANG:-C.UTF-8}"
 export TZ="${TZ:-UTC}"
+# Use Android's native Bionic DNS resolution instead of failing on missing /etc/resolv.conf
+unset GODEBUG
 # CPU & toolchain compatibility: baseline ARMv8.0-A with dynamic outline atomics
 export CFLAGS="-march=armv8-a -moutline-atomics ${CFLAGS:-}"
 export CXXFLAGS="-march=armv8-a -moutline-atomics ${CXXFLAGS:-}"

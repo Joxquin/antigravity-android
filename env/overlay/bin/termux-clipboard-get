@@ -1,0 +1,43 @@
+#!/system/bin/sh
+# AGY clipboard getter shim (termux-clipboard-get / wl-paste / xclip).
+# Queries clipboard text via Antigravity System Gateway.
+
+PORT=""
+if [ -n "$PREFIX" ] && [ -f "$PREFIX/../logs/gateway.port" ]; then
+  PORT=$(cat "$PREFIX/../logs/gateway.port" 2>/dev/null)
+elif [ -f "/data/user/0/com.agy/files/logs/gateway.port" ]; then
+  PORT=$(cat "/data/user/0/com.agy/files/logs/gateway.port" 2>/dev/null)
+elif [ -f "/data/data/com.agy/files/logs/gateway.port" ]; then
+  PORT=$(cat "/data/data/com.agy/files/logs/gateway.port" 2>/dev/null)
+elif [ -d "/data/user/0/com.agy" ] || [ -d "/data/data/com.agy" ]; then
+  PORT=45160
+fi
+
+case "$PORT" in
+  ''|*[!0-9]*) PORT="" ;;
+esac
+
+[ -z "$PORT" ] && exit 0
+
+PAYLOAD="{\"command\":\"clipboard\",\"payload\":{\"action\":\"get\"}}"
+
+CURL_BIN=""
+if [ -n "$PREFIX" ] && [ -x "$PREFIX/bin/curl" ]; then
+  CURL_BIN="$PREFIX/bin/curl"
+elif [ -x /data/user/0/com.agy/files/usr/bin/curl ]; then
+  CURL_BIN="/data/user/0/com.agy/files/usr/bin/curl"
+fi
+
+if [ -n "$CURL_BIN" ]; then
+  LIB_DIR=""
+  [ -n "$PREFIX" ] && [ -d "$PREFIX/lib" ] && LIB_DIR="$PREFIX/lib"
+  [ -z "$LIB_DIR" ] && [ -d "/data/user/0/com.agy/files/usr/lib" ] && LIB_DIR="/data/user/0/com.agy/files/usr/lib"
+
+  RESP=$(LD_LIBRARY_PATH="$LIB_DIR" "$CURL_BIN" -s --connect-timeout 1 -m 2 -X POST "http://127.0.0.1:$PORT/gateway" \
+    -H "Content-Type: application/json" \
+    -d "$PAYLOAD" 2>/dev/null || true)
+  # Extract text from JSON {"ok":true,"text":"..."}
+  echo "$RESP" | sed -n 's/.*"text":"\([^"]*\)".*/\1/p'
+fi
+
+exit 0

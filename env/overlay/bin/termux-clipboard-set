@@ -1,0 +1,49 @@
+#!/system/bin/sh
+# AGY clipboard setter shim (termux-clipboard-set / wl-copy / xclip).
+# Dispatches clipboard text via Antigravity System Gateway.
+
+TEXT=""
+if [ $# -gt 0 ]; then
+  TEXT="$*"
+else
+  TEXT=$(cat)
+fi
+
+PORT=""
+if [ -n "$PREFIX" ] && [ -f "$PREFIX/../logs/gateway.port" ]; then
+  PORT=$(cat "$PREFIX/../logs/gateway.port" 2>/dev/null)
+elif [ -f "/data/user/0/com.agy/files/logs/gateway.port" ]; then
+  PORT=$(cat "/data/user/0/com.agy/files/logs/gateway.port" 2>/dev/null)
+elif [ -f "/data/data/com.agy/files/logs/gateway.port" ]; then
+  PORT=$(cat "/data/data/com.agy/files/logs/gateway.port" 2>/dev/null)
+elif [ -d "/data/user/0/com.agy" ] || [ -d "/data/data/com.agy" ]; then
+  PORT=45160
+fi
+
+case "$PORT" in
+  ''|*[!0-9]*) PORT="" ;;
+esac
+
+[ -z "$PORT" ] && exit 0
+
+JSON_TEXT=$(printf '%s' "$TEXT" | sed 's/\\/\\\\/g; s/"/\\"/g; s/\r/\\r/g; s/\n/\\n/g; s/\t/\\t/g')
+PAYLOAD="{\"command\":\"clipboard\",\"payload\":{\"action\":\"set\",\"text\":\"$JSON_TEXT\"}}"
+
+CURL_BIN=""
+if [ -n "$PREFIX" ] && [ -x "$PREFIX/bin/curl" ]; then
+  CURL_BIN="$PREFIX/bin/curl"
+elif [ -x /data/user/0/com.agy/files/usr/bin/curl ]; then
+  CURL_BIN="/data/user/0/com.agy/files/usr/bin/curl"
+fi
+
+if [ -n "$CURL_BIN" ]; then
+  LIB_DIR=""
+  [ -n "$PREFIX" ] && [ -d "$PREFIX/lib" ] && LIB_DIR="$PREFIX/lib"
+  [ -z "$LIB_DIR" ] && [ -d "/data/user/0/com.agy/files/usr/lib" ] && LIB_DIR="/data/user/0/com.agy/files/usr/lib"
+
+  LD_LIBRARY_PATH="$LIB_DIR" "$CURL_BIN" -s --connect-timeout 1 -m 2 -X POST "http://127.0.0.1:$PORT/gateway" \
+    -H "Content-Type: application/json" \
+    -d "$PAYLOAD" >/dev/null 2>&1 || true
+fi
+
+exit 0
